@@ -1,0 +1,22 @@
+/* ==========================================================================
+   Smart Greenhouse Dashboard - Master Stylesheet (css/style.css)
+   Organized modularly using CSS @import
+   ========================================================================== */
+
+/* 1. Core & Base Design Tokens */
+@import url('base.css');
+
+/* 2. Global Layout & Structure */
+@import url('layout.css');
+
+/* 3. Reusable UI Components */
+@import url('components.css');
+
+/* 4. Page-Specific Styles */
+@import url('pages/dashboard.css');
+@import url('pages/sensors.css');
+@import url('pages/control.css');
+@import url('pages/rules.css');
+@import url('pages/history.css');
+@import url('pages/zones.css');
+@import url('pages/login.css');

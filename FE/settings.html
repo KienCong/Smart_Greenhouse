@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cài đặt hệ thống - Smart Greenhouse</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    document.documentElement.classList.add('preload-transitions');
+    if (localStorage.getItem('SIDEBAR_COLLAPSED') === 'true') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  </script>
+</head>
+
+<body>
+  <!-- Sidebar (Rendered dynamically by js/common.js) -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Header (Rendered dynamically by js/common.js) -->
+    <header class="topbar" id="topbar"></header>
+
+    <!-- Page Body -->
+    <main class="content-area">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Cài đặt hệ thống</h1>
+          <p class="page-subtitle">Cấu hình kết nối ESP32 Gateway, thông báo và dữ liệu lưu trữ</p>
+        </div>
+      </div>
+
+      <div class="rules-grid">
+        <div class="card">
+          <h2 class="card-title">Kết nối phần cứng &amp; MQTT Broker</h2>
+          <div class="form-group">
+            <label class="form-label">Địa chỉ MQTT Broker</label>
+            <input type="text" class="text-input" value="mqtt://192.168.1.100:1883">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Chu kỳ lấy mẫu ESP8266 Sensor (giây)</label>
+            <input type="number" class="text-input" value="5">
+          </div>
+          <button class="btn btn-primary" onclick="showToast('Đã lưu cấu hình kết nối MQTT!')">Lưu kết nối</button>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">Quản lý dữ liệu trình duyệt</h2>
+          <p style="font-size:13.5px; color:#64748b; margin-bottom:16px;">
+            Dữ liệu trạng thái thiết bị, lịch sử hoạt động và danh sách nhà kính được đồng bộ xuyên suốt giữa các trang
+            bằng <code>localStorage</code>.
+          </p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-outline" id="btnResetState">Khôi phục dữ liệu mặc định</button>
+            <button class="btn btn-outline" style="color:#ef4444; border-color:#fca5a5;" onclick="logout()">Đăng
+              xuất</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+
+</html>

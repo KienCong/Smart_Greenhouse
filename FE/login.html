@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập hệ thống - Smart Greenhouse</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body class="login-body">
+  <!-- Ambient Lighting Effects -->
+  <div class="login-orb login-orb-1"></div>
+  <div class="login-orb login-orb-2"></div>
+
+  <!-- Login Main Card -->
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-logo-box">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
+        </svg>
+      </div>
+      <h1 class="login-title">Smart Greenhouse</h1>
+      <p class="login-subtitle">Hệ thống Giám sát &amp; Tự động hóa Nhà kính</p>
+    </div>
+
+    <!-- Alert error banner -->
+    <div class="login-alert" id="loginAlert">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        style="flex-shrink:0;">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span id="alertText">Tài khoản hoặc mật khẩu không chính xác!</span>
+    </div>
+
+    <!-- Form -->
+    <form class="login-form" id="loginForm" autocomplete="on">
+      <div class="login-field-group">
+        <label class="login-label" for="usernameInput">Tài khoản / Email</label>
+        <div class="login-input-wrapper">
+          <span class="login-input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </span>
+          <input type="text" id="usernameInput" class="login-input" placeholder="admin" required autofocus
+            value="admin">
+        </div>
+      </div>
+
+      <div class="login-field-group">
+        <label class="login-label" for="passwordInput">Mật khẩu</label>
+        <div class="login-input-wrapper">
+          <span class="login-input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </span>
+          <input type="password" id="passwordInput" class="login-input" placeholder="••••••••" required value="123456">
+          <button type="button" class="login-toggle-pw" id="togglePasswordBtn" title="Hiện/ẩn mật khẩu">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="login-options-row">
+        <label class="login-remember">
+          <input type="checkbox" id="rememberMe" checked>
+          <span>Ghi nhớ đăng nhập</span>
+        </label>
+        <a href="#" class="login-forgot-link"
+          onclick="alert('Vui lòng liên hệ quản trị viên hệ thống để khôi phục mật khẩu.'); return false;">Quên mật
+          khẩu?</a>
+      </div>
+
+      <button type="submit" class="login-submit-btn" id="submitBtn">
+        <span>Đăng nhập</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      </button>
+    </form>
+
+    <!-- Quick Demo Account Helper -->
+    <div class="login-hint-badge">
+      <div class="login-hint-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <span>Tài khoản thử nghiệm:</span>
+      </div>
+      <div>Tài khoản: <span class="login-hint-code" onclick="fillDemoAccount('admin', '123456')"
+          title="Nhấn để tự điền">admin</span></div>
+      <div>Mật khẩu: <span class="login-hint-code" onclick="fillDemoAccount('admin', '123456')"
+          title="Nhấn để tự điền">123456</span></div>
+    </div>
+
+    <div class="login-footer-copy">
+      © 2025 Smart Greenhouse IoT System
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/login.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,86 @@
+<!-- ==========================================================================
+     Sidebar Template Component (sidebar.html)
+     Thành phần giao diện thanh điều hướng Smart Greenhouse
+     (Được quản lý và render tự động qua js/common.js)
+     ========================================================================== -->
+<aside class="sidebar" id="sidebar">
+  <!-- Brand Logo & Title -->
+  <a href="index.html" class="sidebar-brand">
+    <div class="brand-logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
+      </svg>
+    </div>
+    <span class="brand-title">Smart Greenhouse</span>
+  </a>
+
+  <!-- Navigation Menu Links -->
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-link" data-page="index.html" title="Tổng quan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z" />
+      </svg>
+      <span>Tổng quan</span>
+    </a>
+
+    <a href="sensors.html" class="nav-link" data-page="sensors.html" title="Cảm biến">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+      </svg>
+      <span>Cảm biến</span>
+    </a>
+
+    <a href="control.html" class="nav-link" data-page="control.html" title="Quy tắc tự động">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3" />
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.02 1.41 1.09H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+      <span>Quy tắc tự động</span>
+    </a>
+
+    <a href="history.html" class="nav-link" data-page="history.html" title="Lịch sử">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+      <span>Lịch sử</span>
+    </a>
+
+    <a href="zones.html" class="nav-link" data-page="zones.html" title="Quản lý khu vực">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+        <line x1="8" y1="2" x2="8" y2="18" />
+        <line x1="16" y1="6" x2="16" y2="22" />
+      </svg>
+      <span>Quản lý vườn</span>
+    </a>
+
+    <a href="settings.html" class="nav-link" data-page="settings.html" title="Cài đặt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="4" y1="21" x2="4" y2="14" />
+        <line x1="4" y1="10" x2="4" y2="3" />
+        <line x1="12" y1="21" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12" y2="3" />
+        <line x1="20" y1="21" x2="20" y2="16" />
+        <line x1="20" y1="12" x2="20" y2="3" />
+        <line x1="1" y1="14" x2="7" y2="14" />
+        <line x1="9" y1="8" x2="15" y2="8" />
+        <line x1="17" y1="16" x2="23" y2="16" />
+      </svg>
+      <span>Cài đặt</span>
+    </a>
+  </nav>
+
+  <!-- System Status Footer -->
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-label">Trạng thái hệ thống</div>
+    <div class="system-status">
+      <span class="status-dot"></span>
+      <span>Online</span>
+    </div>
+  </div>
+</aside>

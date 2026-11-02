@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Điều khiển thiết bị - Smart Greenhouse</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    document.documentElement.classList.add('preload-transitions');
+    if (localStorage.getItem('SIDEBAR_COLLAPSED') === 'true') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  </script>
+</head>
+
+<body>
+  <!-- Sidebar (Rendered dynamically by js/common.js) -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Header (Rendered dynamically by js/common.js) -->
+    <header class="topbar" id="topbar"></header>
+
+    <!-- Page Body -->
+    <main class="content-area">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Điều khiển thiết bị</h1>
+          <p class="page-subtitle">Cài đặt ngưỡng và lịch trình cho hệ thống tưới và quạt</p>
+        </div>
+      </div>
+
+      <div class="tabs-nav">
+        <button class="tab-btn active" data-tab="tuoi-cay">Tưới cây</button>
+        <button class="tab-btn" data-tab="quat-thong-gio">Quạt thông gió</button>
+      </div>
+
+      <div class="rules-grid">
+        <!-- Left Column: Cấu hình / Điều khiển -->
+        <div class="card">
+          <div class="card-header-flex">
+            <h2 class="card-title" style="margin-bottom:0;" id="ruleConfigTitle">Cấu hình tưới tự động</h2>
+            <div style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600;">
+              <label class="switch">
+                <input type="checkbox" id="ruleAutoSwitch" checked>
+                <span class="slider"></span>
+              </label>
+              <span>Bật</span>
+            </div>
+          </div>
+
+          <div class="form-label">Chế độ hoạt động</div>
+          <div class="mode-segmented">
+            <button type="button" class="mode-btn active" id="modeAutoBtn">AUTO</button>
+            <button type="button" class="mode-btn" id="modeManualBtn">MANUAL</button>
+          </div>
+
+          <!-- AUTO Mode Fields -->
+          <div id="autoConfigSection">
+            <div class="form-group">
+              <label class="form-label" id="lblThresholdOn">Ngưỡng bật bơm (độ ẩm đất %)</label>
+              <input type="number" id="inputMinSoil" class="text-input" value="35">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" id="lblMaxRun">Thời gian tưới tối đa (giây)</label>
+              <input type="number" id="inputMaxPumpSec" class="text-input" value="30">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Thời gian nghỉ (phút)</label>
+              <input type="number" id="inputRestMin" class="text-input" value="10">
+            </div>
+          </div>
+
+          <!-- MANUAL Mode Fields (Cassava Style) -->
+          <div id="manualConfigSection" style="display:none;">
+            <div class="info-alert" style="margin-bottom:16px;">
+              <div class="info-alert-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z" />
+                </svg>
+                <span>Chế độ điều khiển thủ công</span>
+              </div>
+              <p style="font-size:12.5px; color:#334155; margin:0; line-height:1.5;" id="manualAlertDesc">
+                Thiết bị sẽ không tự động kích hoạt theo cảm biến. Bạn có thể kích hoạt chạy ngay hoặc hẹn giờ thực thi thủ công.
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" id="lblManualTime">Thời điểm tưới</label>
+              <input type="datetime-local" id="manualScheduleTime" class="text-input">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" id="lblManualDuration">Thời gian tưới (phút)</label>
+              <input type="number" id="manualDuration" class="text-input" min="0.5" step="0.5" value="5">
+            </div>
+
+            <div class="manual-actions-vertical">
+              <button type="button" class="btn btn-primary btn-block btn-lg" id="btnRunNow">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span id="lblRunNowText">Tưới ngay</span>
+              </button>
+              <button type="button" class="btn btn-outline btn-block btn-lg" id="btnScheduleManual">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span id="lblScheduleManualText">Đặt lịch</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Lịch AUTO hoặc Danh sách lịch MANUAL -->
+        <div>
+          <!-- Right Card 1: AUTO Schedule Card -->
+          <div class="card" id="autoScheduleCard">
+            <div class="card-header-flex">
+              <h2 class="card-title" style="margin-bottom:0;">Lịch hoạt động tự động</h2>
+              <div style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600;">
+                <label class="switch">
+                  <input type="checkbox" id="ruleScheduleSwitch" checked>
+                  <span class="slider"></span>
+                </label>
+                <span>Bật</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Thời gian bắt đầu</label>
+              <input type="time" id="inputStartTime" class="text-input" value="06:00">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Thời gian kết thúc</label>
+              <input type="time" id="inputEndTime" class="text-input" value="18:00">
+            </div>
+
+            <div class="form-label">Ngày trong tuần</div>
+            <div class="weekdays-row" id="weekdaysRow">
+              <label class="day-check"><input type="checkbox" value="T2" checked> T2</label>
+              <label class="day-check"><input type="checkbox" value="T3" checked> T3</label>
+              <label class="day-check"><input type="checkbox" value="T4" checked> T4</label>
+              <label class="day-check"><input type="checkbox" value="T5" checked> T5</label>
+              <label class="day-check"><input type="checkbox" value="T6" checked> T6</label>
+              <label class="day-check"><input type="checkbox" value="T7" checked> T7</label>
+              <label class="day-check"><input type="checkbox" value="CN" checked> CN</label>
+            </div>
+
+            <div class="info-alert">
+              <div class="info-alert-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z" />
+                </svg>
+                <span>Lưu ý</span>
+              </div>
+              <ul>
+                <li>Thiết bị (bơm hoặc quạt) tự động kích hoạt khi cảm biến vượt ngưỡng cài đặt và ngắt sau thời gian chạy tối đa.</li>
+                <li>Sau mỗi chu kỳ hoạt động, hệ thống sẽ nghỉ theo thời gian cài đặt trước khi kiểm tra lại cảm biến.</li>
+                <li>Có thể chuyển sang chế độ MANUAL để điều khiển thủ công.</li>
+              </ul>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end;">
+              <button class="btn btn-primary" id="saveRuleBtn">Lưu cấu hình</button>
+            </div>
+          </div>
+
+          <!-- Right Card 2: MANUAL Schedule Table Card (Cassava Style) -->
+          <div class="card" id="manualScheduleCard" style="display:none;">
+            <div class="card-header-flex">
+              <h2 class="card-title" style="margin-bottom:0;" id="manualListTitle">Danh sách lịch tưới thủ công</h2>
+              <button type="button" class="btn btn-outline" id="btnRefreshManualList" style="padding:6px 14px; font-size:12.5px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M1 20v-6h6"></path>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                Làm mới
+              </button>
+            </div>
+
+            <div class="table-container" style="box-shadow:none; border:1px solid var(--border-color); border-radius:8px;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Thời điểm</th>
+                    <th>Thời lượng</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align:right;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="manualScheduleTableBody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Xác nhận Kích hoạt ngay (Cassava Style) -->
+  <div class="modal-backdrop" id="runNowModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-header-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <div>
+          <h3 class="modal-title" id="modalConfirmTitle">Tưới ngay?</h3>
+          <span style="font-size:12px; color:#64748b;">Kích hoạt thiết bị ngay lập tức</span>
+        </div>
+      </div>
+      <div class="modal-body">
+        <p id="modalConfirmDesc">Bạn có chắc chắn muốn kích hoạt máy bơm tưới ngay bây giờ không?</p>
+        <div class="modal-info-box">
+          <div class="modal-info-row">
+            <span style="color:#64748b;">Khu vực:</span>
+            <strong id="modalZoneName">Nhà kính số 1</strong>
+          </div>
+          <div class="modal-info-row">
+            <span style="color:#64748b;">Thiết bị:</span>
+            <strong id="modalDeviceName">Máy bơm tưới</strong>
+          </div>
+          <div class="modal-info-row">
+            <span style="color:#64748b;">Thời lượng:</span>
+            <strong id="modalDurationText" style="color:#2563eb;">5 phút</strong>
+          </div>
+        </div>
+        <p style="font-size:12.5px; color:#d97706; margin-top:8px;">
+          <i>* Lệnh điều khiển sẽ được gửi xuống thiết bị và kích hoạt ngay tức thì.</i>
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="modalCancelBtn">Hủy</button>
+        <button type="button" class="btn btn-primary" id="modalConfirmBtn">Kích hoạt ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/control.js"></script>
+</body>
+
+</html>

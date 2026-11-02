@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý khu vực - Smart Greenhouse</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    document.documentElement.classList.add('preload-transitions');
+    if (localStorage.getItem('SIDEBAR_COLLAPSED') === 'true') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  </script>
+</head>
+
+<body>
+  <!-- Sidebar (Rendered dynamically by js/common.js) -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Header (Rendered dynamically by js/common.js) -->
+    <header class="topbar" id="topbar"></header>
+
+    <!-- Page Body -->
+    <main class="content-area">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Quản lý khu vực</h1>
+          <p class="page-subtitle">Danh sách các khu vực nhà kính</p>
+        </div>
+        <button class="btn btn-primary" id="btnAddZone">+ Thêm khu vực</button>
+      </div>
+
+      <div class="zones-stack" id="zonesContainer"></div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/zones.js"></script>
+</body>
+
+</html>

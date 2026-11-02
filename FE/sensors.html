@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch sử dữ liệu cảm biến - Smart Greenhouse</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    document.documentElement.classList.add('preload-transitions');
+    if (localStorage.getItem('SIDEBAR_COLLAPSED') === 'true') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <!-- Sidebar (Rendered dynamically by js/common.js) -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Header (Rendered dynamically by js/common.js) -->
+    <header class="topbar" id="topbar"></header>
+
+    <!-- Page Body -->
+    <main class="content-area">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Lịch sử dữ liệu cảm biến</h1>
+          <p class="page-subtitle">Xem và phân tích dữ liệu cảm biến theo thời gian</p>
+        </div>
+      </div>
+
+      <div class="toolbar-row">
+        <div class="time-filter-group">
+          <button type="button" class="time-btn-pill" data-range="24h">24 giờ qua</button>
+          <button type="button" class="time-btn-pill active" data-range="7d">7 ngày qua</button>
+          <button type="button" class="time-btn-pill" data-range="30d">30 ngày qua</button>
+          <div class="date-range-box">
+            <span style="color:#94a3b8; font-size:12px;">Tùy chỉnh:</span>
+            <input type="date" id="sensorStartDate" value="2025-04-21">
+            <span style="color:#94a3b8;">–</span>
+            <input type="date" id="sensorEndDate" value="2025-04-28">
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-outline" id="refreshSensorsBtn" title="Làm mới dữ liệu">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            <span>Làm mới</span>
+          </button>
+          <button class="btn btn-outline" id="exportSensorBtn" title="Tải file CSV">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Xuất dữ liệu</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sensor-history-list">
+        <!-- Card 1: Nhiệt độ không khí (Cassava color: #ff4d4f) -->
+        <div class="sensor-history-card">
+          <div class="sensor-card-header">
+            <div class="sensor-card-title-group">
+              <div class="sensor-card-icon-box" style="color:#ff4d4f; background:rgba(255,77,79,0.08);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4z" />
+                </svg>
+              </div>
+              <div>
+                <div class="sensor-card-name">Nhiệt độ không khí</div>
+                <div class="sensor-card-unit-label">Cảm biến nhiệt độ môi trường trạm quan trắc (SHT30)</div>
+              </div>
+            </div>
+            <div class="sensor-card-val-badge" style="color:#ff4d4f;">
+              <span id="tempCurrent">28.4</span>
+              <span class="sensor-card-val-unit">°C</span>
+            </div>
+          </div>
+          <div class="sensor-stats-bar">
+            <div class="sensor-stats-bar-item">Thấp nhất: <strong id="tempMin">23.1 °C</strong></div>
+            <div class="sensor-stats-bar-item">Cao nhất: <strong id="tempMax">34.2 °C</strong></div>
+            <div class="sensor-stats-bar-item">Trung bình: <strong id="tempAvg">27.6 °C</strong></div>
+            <div class="sensor-stats-bar-item" style="margin-left:auto; color:#94a3b8;">Cập nhật: <span id="tempTime">28/04/2025 10:24</span></div>
+          </div>
+          <div class="sensor-chart-box">
+            <canvas id="chartTemp"></canvas>
+          </div>
+        </div>
+
+        <!-- Card 2: Độ ẩm không khí (Cassava color: #1890ff) -->
+        <div class="sensor-history-card">
+          <div class="sensor-card-header">
+            <div class="sensor-card-title-group">
+              <div class="sensor-card-icon-box" style="color:#1890ff; background:rgba(24,144,255,0.08);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                </svg>
+              </div>
+              <div>
+                <div class="sensor-card-name">Độ ẩm không khí</div>
+                <div class="sensor-card-unit-label">Độ ẩm tương đối môi trường nhà kính (SHT30)</div>
+              </div>
+            </div>
+            <div class="sensor-card-val-badge" style="color:#1890ff;">
+              <span id="airCurrent">72.3</span>
+              <span class="sensor-card-val-unit">%</span>
+            </div>
+          </div>
+          <div class="sensor-stats-bar">
+            <div class="sensor-stats-bar-item">Thấp nhất: <strong id="airMin">56.2 %</strong></div>
+            <div class="sensor-stats-bar-item">Cao nhất: <strong id="airMax">92.1 %</strong></div>
+            <div class="sensor-stats-bar-item">Trung bình: <strong id="airAvg">70.8 %</strong></div>
+            <div class="sensor-stats-bar-item" style="margin-left:auto; color:#94a3b8;">Cập nhật: <span id="airTime">28/04/2025 10:24</span></div>
+          </div>
+          <div class="sensor-chart-box">
+            <canvas id="chartAir"></canvas>
+          </div>
+        </div>
+
+        <!-- Card 3: Độ ẩm đất (Cassava color: #13c2c2) -->
+        <div class="sensor-history-card">
+          <div class="sensor-card-header">
+            <div class="sensor-card-title-group">
+              <div class="sensor-card-icon-box" style="color:#13c2c2; background:rgba(19,194,194,0.08);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 3L4 14a8 8 0 0 0 16 0L12 3z" />
+                </svg>
+              </div>
+              <div>
+                <div class="sensor-card-name">Độ ẩm đất trồng</div>
+                <div class="sensor-card-unit-label">Cảm biến độ ẩm đất điện dung tầng rễ (Capacitive v2)</div>
+              </div>
+            </div>
+            <div class="sensor-card-val-badge" style="color:#08979c;">
+              <span id="soilCurrent">42.7</span>
+              <span class="sensor-card-val-unit">%</span>
+            </div>
+          </div>
+          <div class="sensor-stats-bar">
+            <div class="sensor-stats-bar-item">Thấp nhất: <strong id="soilMin">22.3 %</strong></div>
+            <div class="sensor-stats-bar-item">Cao nhất: <strong id="soilMax">68.9 %</strong></div>
+            <div class="sensor-stats-bar-item">Trung bình: <strong id="soilAvg">41.5 %</strong></div>
+            <div class="sensor-stats-bar-item" style="margin-left:auto; color:#94a3b8;">Cập nhật: <span id="soilTime">28/04/2025 10:24</span></div>
+          </div>
+          <div class="sensor-chart-box">
+            <canvas id="chartSoil"></canvas>
+          </div>
+        </div>
+
+        <!-- Card 4: Cường độ ánh sáng (Cassava color: #faad14) -->
+        <div class="sensor-history-card">
+          <div class="sensor-card-header">
+            <div class="sensor-card-title-group">
+              <div class="sensor-card-icon-box" style="color:#d48806; background:rgba(250,173,20,0.12);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="5" />
+                </svg>
+              </div>
+              <div>
+                <div class="sensor-card-name">Cường độ ánh sáng / Bức xạ</div>
+                <div class="sensor-card-unit-label">Cảm biến quang thông lượng mặt trời (BH1750)</div>
+              </div>
+            </div>
+            <div class="sensor-card-val-badge" style="color:#d48806;">
+              <span id="lightCurrent">562</span>
+              <span class="sensor-card-val-unit">lux</span>
+            </div>
+          </div>
+          <div class="sensor-stats-bar">
+            <div class="sensor-stats-bar-item">Thấp nhất: <strong id="lightMin">120 lux</strong></div>
+            <div class="sensor-stats-bar-item">Cao nhất: <strong id="lightMax">985 lux</strong></div>
+            <div class="sensor-stats-bar-item">Trung bình: <strong id="lightAvg">564 lux</strong></div>
+            <div class="sensor-stats-bar-item" style="margin-left:auto; color:#94a3b8;">Cập nhật: <span id="lightTime">28/04/2025 10:24</span></div>
+          </div>
+          <div class="sensor-chart-box">
+            <canvas id="chartLight"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/sensors.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,15 @@
+# PlatformIO build artifacts & cache (QUAN TRỌNG NHẤT)
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# VS Code IDE config
+.vscode/
+
+# Nếu dùng Clion/CLion PlatformIO plugin (dự phòng)
+.idea/
+cmake-build-*/
+
+# File tạm hệ điều hành
+.DS_Store
+Thumbs.db

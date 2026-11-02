@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch sử hoạt động - Smart Greenhouse</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    document.documentElement.classList.add('preload-transitions');
+    if (localStorage.getItem('SIDEBAR_COLLAPSED') === 'true') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  </script>
+</head>
+
+<body>
+  <!-- Sidebar (Rendered dynamically by js/common.js) -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Header (Rendered dynamically by js/common.js) -->
+    <header class="topbar" id="topbar"></header>
+
+    <!-- Page Body -->
+    <main class="content-area">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Lịch sử hoạt động</h1>
+          <p class="page-subtitle">Theo dõi các sự kiện và lệnh điều khiển</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="max-width:260px;">
+          <input type="text" class="text-input" value="21/04/2025 – 28/04/2025" readonly style="width:100%;">
+        </div>
+
+        <div class="filter-pills" id="historyFilterPills">
+          <button class="pill-btn active" data-filter="ALL">Tất cả</button>
+          <button class="pill-btn" data-filter="Máy bơm">Máy bơm</button>
+          <button class="pill-btn" data-filter="Quạt">Quạt</button>
+          <button class="pill-btn" data-filter="Cảnh báo">Cảnh báo</button>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Loại</th>
+                <th>Sự kiện</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <button class="page-num">&lt;</button>
+          <button class="page-num active">1</button>
+          <button class="page-num">2</button>
+          <button class="page-num">3</button>
+          <button class="page-num">4</button>
+          <button class="page-num">5</button>
+          <button class="page-num">&gt;</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/history.js"></script>
+</body>
+
+</html>
