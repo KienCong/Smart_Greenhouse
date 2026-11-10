@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const s = getAppState();
     s.selectedZone = zoneName;
     saveAppState(s);
-    window.location.href = 'index.html';
+    window.location.href = 'overview.html';
   };
 
   window.toggleZoneStatus = function(zoneId) {

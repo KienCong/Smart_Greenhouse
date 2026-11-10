@@ -1,4 +1,58 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+  // =========================================================
+  // CẤU HÌNH API AUTOMATION-SERVICE
+  // =========================================================
+  const API_GATEWAY_URL = 'http://localhost:8080/api/automation';
+  const API_DIRECT_URL  = 'http://localhost:8085/api/automation';
+
+  // Mapping tab → deviceId quy ước chuẩn (khớp với firmware esp32_gateway & backend)
+  const DEVICE_MAP = {
+    'tuoi-cay':      { id: 'PUMP_01', name: 'Máy bơm tưới', type: 'pump' },
+    'quat-thong-gio': { id: 'FAN_01',  name: 'Quạt thông gió', type: 'fan' }
+  };
+
+  // Timer tự động ngắt theo tab
+  const autoOffTimers = {
+    'tuoi-cay': null,
+    'quat-thong-gio': null
+  };
+
+  // Helper lấy Field ID hiện tại
+  function getActiveFieldId() {
+    const state = typeof getAppState === 'function' ? getAppState() : {};
+    const zones = state.zones || [];
+    const selectedZoneName = state.selectedZone;
+    const zone = zones.find(z => z.name === selectedZoneName) || zones[0];
+    
+    return (zone && zone.fieldId && !zone.fieldId.startsWith('REPLACE'))
+      ? zone.fieldId
+      : '6ae17860acc00a053d9c7a7e';
+  }
+
+  // Wrapper fetch có auto fallback giữa API Gateway (8080) và Direct Service (8085)
+  async function apiFetch(path, options = {}) {
+    options.headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+
+    try {
+      const res = await fetch(`${API_GATEWAY_URL}${path}`, options);
+      if (res.ok || res.status < 500) return res;
+      throw new Error(`Gateway returned ${res.status}`);
+    } catch (gatewayErr) {
+      try {
+        return await fetch(`${API_DIRECT_URL}${path}`, options);
+      } catch (directErr) {
+        throw new Error('Không thể kết nối đến automation-service (cả port 8080 và 8085 đều không phản hồi)');
+      }
+    }
+  }
+
+  // =========================================================
+  // CÁC PHẦN TỬ GIAO DIỆN
+  // =========================================================
   const modeAutoBtn = document.getElementById('modeAutoBtn');
   const modeManualBtn = document.getElementById('modeManualBtn');
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -7,70 +61,77 @@ document.addEventListener('DOMContentLoaded', () => {
   const manualConfigSection = document.getElementById('manualConfigSection');
   const autoScheduleCard = document.getElementById('autoScheduleCard');
   const manualScheduleCard = document.getElementById('manualScheduleCard');
+  const ruleAutoSwitchWrapper = document.getElementById('ruleAutoSwitchWrapper');
 
   const ruleConfigTitle = document.getElementById('ruleConfigTitle');
   const manualListTitle = document.getElementById('manualListTitle');
   const lblManualTime = document.getElementById('lblManualTime');
   const lblManualDuration = document.getElementById('lblManualDuration');
-  const lblRunNowText = document.getElementById('lblRunNowText');
-  const lblScheduleManualText = document.getElementById('lblScheduleManualText');
   const manualAlertDesc = document.getElementById('manualAlertDesc');
 
   let currentMode = 'AUTO'; // 'AUTO' | 'MANUAL'
 
-  // Khởi tạo danh sách lịch thủ công nếu chưa có trong state
-  const state = getAppState();
-  if (!state.manualSchedules || !state.manualSchedules.length) {
-    state.manualSchedules = [
-      {
-        id: 1,
-        device: 'Máy bơm',
-        targetTab: 'tuoi-cay',
-        scheduledTime: '27/10/2026 17:00',
-        durationMinutes: 5,
-        status: 'RUNNING'
-      },
-      {
-        id: 2,
-        device: 'Máy bơm',
-        targetTab: 'tuoi-cay',
-        scheduledTime: '27/10/2026 19:30',
-        durationMinutes: 10,
-        status: 'PENDING'
-      },
-      {
-        id: 3,
-        device: 'Máy bơm',
-        targetTab: 'tuoi-cay',
-        scheduledTime: '27/10/2026 08:00',
-        durationMinutes: 15,
-        status: 'DONE'
-      },
-      {
-        id: 4,
-        device: 'Quạt',
-        targetTab: 'quat-thong-gio',
-        scheduledTime: '27/10/2026 14:00',
-        durationMinutes: 20,
-        status: 'DONE'
-      }
-    ];
-    saveAppState(state);
-  }
-
-  // Khởi tạo input datetime-local mặc định (thời điểm hiện tại + 10 phút)
+  // Khởi tạo input datetime-local mặc định (thời điểm hiện tại + 5 phút)
   const manualScheduleTimeInput = document.getElementById('manualScheduleTime');
   if (manualScheduleTimeInput) {
     const now = new Date();
-    now.setMinutes(now.getMinutes() + 10);
+    now.setMinutes(now.getMinutes() + 5);
     const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     manualScheduleTimeInput.value = localIso;
   }
 
-  // Cập nhật giao diện theo chế độ AUTO / MANUAL
+  // Helper lấy active tab hiện tại
+  function getActiveTab() {
+    return document.querySelector('.tab-btn.active')?.dataset.tab || 'tuoi-cay';
+  }
+
+  // Helper kiểm tra thiết bị của tab hiện tại đang bật hay tắt
+  function isDeviceRunning(tab) {
+    const stateObj = getAppState();
+    return tab === 'quat-thong-gio' ? !!stateObj.fanOn : !!stateObj.pumpOn;
+  }
+
+  // =========================================================
+  // ĐỒNG BỘ NÚT "TƯỚI NGAY / BẬT QUẠT" VÀ "DỪNG"
+  // =========================================================
+  function updateRunButtonUI() {
+    const btn = document.getElementById('btnRunNow');
+    if (!btn) return;
+
+    const activeTab = getActiveTab();
+    const running = isDeviceRunning(activeTab);
+
+    if (running) {
+      // Khi đang hoạt động: Chuyển sang nút DỪNG màu đỏ
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-danger');
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+        </svg>
+        <span id="lblRunNowText">${activeTab === 'quat-thong-gio' ? 'Dừng quạt' : 'Dừng tưới'}</span>
+      `;
+      btn.title = `Nhấn để dừng ${activeTab === 'quat-thong-gio' ? 'quạt' : 'máy bơm'} ngay lập tức`;
+    } else {
+      // Khi đang tắt: Trở về nút TƯỚI NGAY / BẬT QUẠT NGAY màu xanh
+      btn.classList.remove('btn-danger');
+      btn.classList.add('btn-primary');
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span id="lblRunNowText">${activeTab === 'quat-thong-gio' ? 'Bật quạt ngay' : 'Tưới ngay'}</span>
+      `;
+      btn.title = `Kích hoạt ${activeTab === 'quat-thong-gio' ? 'quạt' : 'máy bơm'} ngay lập tức`;
+    }
+  }
+
+  // =========================================================
+  // CHUYỂN CHẾ ĐỘ AUTO / MANUAL
+  // =========================================================
   function updateModeView(mode) {
     currentMode = mode;
-    const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'tuoi-cay';
+    const activeTab = getActiveTab();
 
     if (mode === 'AUTO') {
       modeAutoBtn?.classList.add('active');
@@ -79,6 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (manualConfigSection) manualConfigSection.style.display = 'none';
       if (autoScheduleCard) autoScheduleCard.style.display = 'block';
       if (manualScheduleCard) manualScheduleCard.style.display = 'none';
+
+      // Ở chế độ AUTO: HIỂN THỊ nút switch Bật ở card header
+      if (ruleAutoSwitchWrapper) ruleAutoSwitchWrapper.style.display = 'flex';
 
       if (ruleConfigTitle) {
         ruleConfigTitle.textContent = activeTab === 'quat-thong-gio'
@@ -93,8 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (autoScheduleCard) autoScheduleCard.style.display = 'none';
       if (manualScheduleCard) manualScheduleCard.style.display = 'block';
 
+      // Ở chế độ THỦ CÔNG (MANUAL): BỎ ĐI button switch Bật theo yêu cầu
+      if (ruleAutoSwitchWrapper) ruleAutoSwitchWrapper.style.display = 'none';
+
       updateManualTabLabels(activeTab);
-      renderManualScheduleTable();
+      updateRunButtonUI();
+      loadManualSchedules();
     }
   }
 
@@ -105,8 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (manualListTitle) manualListTitle.textContent = 'Danh sách lịch quạt thủ công';
       if (lblManualTime) lblManualTime.textContent = 'Thời điểm bật quạt';
       if (lblManualDuration) lblManualDuration.textContent = 'Thời gian chạy quạt (phút)';
-      if (lblRunNowText) lblRunNowText.textContent = 'Bật quạt ngay';
-      if (lblScheduleManualText) lblScheduleManualText.textContent = 'Đặt lịch quạt';
       if (manualAlertDesc) {
         manualAlertDesc.textContent = 'Quạt thông gió đang ở chế độ thủ công. Bạn có thể kích hoạt chạy ngay hoặc hẹn giờ thực thi độc lập với cảm biến nhiệt độ.';
       }
@@ -117,8 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (manualListTitle) manualListTitle.textContent = 'Danh sách lịch tưới thủ công';
       if (lblManualTime) lblManualTime.textContent = 'Thời điểm tưới';
       if (lblManualDuration) lblManualDuration.textContent = 'Thời gian tưới (phút)';
-      if (lblRunNowText) lblRunNowText.textContent = 'Tưới ngay';
-      if (lblScheduleManualText) lblScheduleManualText.textContent = 'Đặt lịch tưới';
       if (manualAlertDesc) {
         manualAlertDesc.textContent = 'Máy bơm đang ở chế độ thủ công. Bạn có thể kích hoạt tưới ngay hoặc hẹn giờ thực thi độc lập với cảm biến độ ẩm đất.';
       }
@@ -130,7 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
     modeManualBtn.addEventListener('click', () => updateModeView('MANUAL'));
   }
 
-  // Khởi tạo các giá trị cài đặt AUTO từ localStorage
+  // =========================================================
+  // KHỞI TẠO GIÁ TRỊ AUTO TỪ LOCALSTORAGE
+  // =========================================================
   const s = getAppState();
   if (s && s.autoRule) {
     const inputMinSoil = document.getElementById('inputMinSoil');
@@ -177,7 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } else {
         updateManualTabLabels(tab);
-        renderManualScheduleTable();
+        updateRunButtonUI();
+        loadManualSchedules();
       }
     });
   });
@@ -188,19 +255,17 @@ document.addEventListener('DOMContentLoaded', () => {
     saveBtn.addEventListener('click', () => {
       const stateObj = getAppState();
       stateObj.autoRule = stateObj.autoRule || {};
-      const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'tuoi-cay';
+      const activeTab = getActiveTab();
 
       if (activeTab === 'quat-thong-gio') {
         stateObj.autoRule.fanOnTemp = Number(document.getElementById('inputMinSoil')?.value) || 32;
         stateObj.autoRule.fanMaxRunMin = Number(document.getElementById('inputMaxPumpSec')?.value) || 15;
         stateObj.autoRule.fanRestMin = Number(document.getElementById('inputRestMin')?.value) || 30;
-        delete stateObj.autoRule.fanOffTemp;
         addActivityLog('Quạt', `Cài đặt quạt tự động: bật khi nhiệt độ > ${stateObj.autoRule.fanOnTemp}°C, chạy ${stateObj.autoRule.fanMaxRunMin} phút`, 'Thành công');
       } else {
         stateObj.autoRule.minSoilHum = Number(document.getElementById('inputMinSoil')?.value) || 35;
         stateObj.autoRule.maxPumpSec = Number(document.getElementById('inputMaxPumpSec')?.value) || 30;
         stateObj.autoRule.restMin = Number(document.getElementById('inputRestMin')?.value) || 10;
-        delete stateObj.autoRule.maxSoilHum;
         addActivityLog('Máy bơm', `Cài đặt tưới tự động: bật khi độ ẩm < ${stateObj.autoRule.minSoilHum}%, tưới ${stateObj.autoRule.maxPumpSec}s`, 'Thành công');
       }
 
@@ -211,33 +276,216 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ================= CASSAVA MANUAL IRRIGATION LOGIC =================
+  // =========================================================
+  // BACKEND API: GỬI LỆNH ĐIỀU KHIỂN THIẾT BỊ (ON / OFF)
+  // =========================================================
+  async function sendDeviceCommand(deviceId, action) {
+    const fieldId = getActiveFieldId();
 
-  // Render bảng danh sách lịch điều khiển thủ công
-  function renderManualScheduleTable() {
+    try {
+      const res = await apiFetch(`/devices/${deviceId}/commands`, {
+        method: 'POST',
+        body: JSON.stringify({
+          fieldId: fieldId,
+          action: action
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Mã lỗi ${res.status}: ${errorText || res.statusText}`);
+      }
+
+      const data = await res.json();
+      console.log(`[Automation API] Lệnh ${action} gửi thành công:`, data);
+      return data;
+    } catch (err) {
+      console.error('[Automation API] Lỗi gửi lệnh điều khiển:', err);
+      throw err;
+    }
+  }
+
+  // =========================================================
+  // BACKEND API: TẠO LỊCH HẸN GIỜ (SCHEDULE)
+  // =========================================================
+  async function createDeviceSchedule(deviceRef, startTimeIso, durationSeconds) {
+    const fieldId = getActiveFieldId();
+
+    try {
+      const res = await apiFetch(`/schedules/${fieldId}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceRef: deviceRef,
+          startTime: startTimeIso,
+          durationSeconds: durationSeconds,
+          triggerType: 'MANUAL'
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Mã lỗi ${res.status}: ${errorText || res.statusText}`);
+      }
+
+      const data = await res.json();
+      console.log('[Automation API] Tạo lịch thành công:', data);
+      return data;
+    } catch (err) {
+      console.error('[Automation API] Lỗi tạo lịch:', err);
+      throw err;
+    }
+  }
+
+  // =========================================================
+  // BACKEND API: TẢI DANH SÁCH LỊCH TỪ BACKEND
+  // =========================================================
+  async function fetchBackendSchedules() {
+    const fieldId = getActiveFieldId();
+    try {
+      const res = await apiFetch(`/schedules/${fieldId}`, { method: 'GET' });
+      if (res.ok) {
+        return await res.json();
+      }
+      return null;
+    } catch (e) {
+      console.warn('[Automation API] Không thể tải lịch từ backend, chuyển sang dữ liệu local:', e.message);
+      return null;
+    }
+  }
+
+  // =========================================================
+  // BACKEND API: XÓA LỊCH HẸN GIỜ (HỦY LỊCH PENDING)
+  // =========================================================
+  async function deleteBackendSchedule(scheduleId) {
+    try {
+      const res = await apiFetch(`/schedules/${scheduleId}`, { method: 'DELETE' });
+      return res.ok;
+    } catch (e) {
+      console.warn('[Automation API] Lỗi xóa lịch trên backend:', e.message);
+      return false;
+    }
+  }
+
+  // =========================================================
+  // HÀM DỪNG THIẾT BỊ NGAY LẬP TỨC (DÙNG CHO NÚT DỪNG LỚN)
+  // =========================================================
+  async function stopActiveDevice() {
+    const activeTab = getActiveTab();
+    const currentDevice = DEVICE_MAP[activeTab];
+
+    showToast(`Đang gửi lệnh dừng ${currentDevice.name.toLowerCase()}...`);
+
+    // Xóa timer auto-off nếu có
+    if (autoOffTimers[activeTab]) {
+      clearTimeout(autoOffTimers[activeTab]);
+      autoOffTimers[activeTab] = null;
+    }
+
+    try {
+      await sendDeviceCommand(currentDevice.id, 'OFF');
+      showToast(`Đã dừng ${currentDevice.name.toLowerCase()} thành công!`);
+    } catch (err) {
+      showToast(`⚠️ Không thể kết nối backend: ${err.message}. Đã dừng trạng thái.`);
+    }
+
+    const stateObj = getAppState();
+    if (activeTab === 'quat-thong-gio') {
+      stateObj.fanOn = false;
+    } else {
+      stateObj.pumpOn = false;
+    }
+
+    // Chuyển các lịch đang RUNNING của tab này thành DONE
+    (stateObj.manualSchedules || []).forEach(item => {
+      if (item.targetTab === activeTab && item.status === 'RUNNING') {
+        item.status = 'DONE';
+      }
+    });
+
+    addActivityLog(currentDevice.name, `Dừng ${currentDevice.name.toLowerCase()} thủ công ngay lập tức`, 'Thành công');
+    saveAppState(stateObj);
+
+    // Cập nhật lại giao diện nút và bảng
+    updateRunButtonUI();
+    loadManualSchedules();
+  }
+
+  // =========================================================
+  // RENDER BẢNG DANH SÁCH LỊCH THỦ CÔNG
+  // LƯU Ý: Dòng RUNNING không cho click dừng tại đây, mà phải dùng nút Dừng lớn
+  // =========================================================
+  async function loadManualSchedules() {
     const tbody = document.getElementById('manualScheduleTableBody');
     if (!tbody) return;
 
-    const stateObj = getAppState();
-    const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'tuoi-cay';
-    const schedules = (stateObj.manualSchedules || []).filter(item => item.targetTab === activeTab);
+    const activeTab = getActiveTab();
+    const currentDevice = DEVICE_MAP[activeTab];
 
-    if (!schedules.length) {
+    // Thử lấy danh sách lịch thực từ backend
+    const backendList = await fetchBackendSchedules();
+
+    let displayList = [];
+
+    if (backendList && Array.isArray(backendList)) {
+      const now = new Date();
+      displayList = backendList
+        .filter(item => {
+          const ref = (item.deviceRef || '').toUpperCase();
+          return activeTab === 'quat-thong-gio'
+            ? (ref.includes('FAN') || ref.includes('QUAT'))
+            : (ref.includes('PUMP') || ref.includes('BOM'));
+        })
+        .map(item => {
+          const start = new Date(item.startTime);
+          const end = item.endTime ? new Date(item.endTime) : new Date(start.getTime() + (item.durationSeconds || 0) * 1000);
+          
+          let status = 'PENDING';
+          if (now >= start && now < end) {
+            status = 'RUNNING';
+          } else if (now >= end) {
+            status = 'DONE';
+          }
+
+          const pad = n => String(n).padStart(2, '0');
+          const timeFormatted = `${pad(start.getDate())}/${pad(start.getMonth() + 1)}/${start.getFullYear()} ${pad(start.getHours())}:${pad(start.getMinutes())}`;
+
+          return {
+            id: item.id,
+            device: currentDevice.name,
+            targetTab: activeTab,
+            scheduledTime: timeFormatted,
+            durationMinutes: Math.round((item.durationSeconds || 0) / 60),
+            status: status,
+            isBackend: true
+          };
+        });
+    }
+
+    // Nếu backend chưa có hoặc rỗng, dùng dữ liệu local
+    if (!displayList.length) {
+      const stateObj = getAppState();
+      displayList = (stateObj.manualSchedules || []).filter(item => item.targetTab === activeTab);
+    }
+
+    if (!displayList.length) {
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:24px 16px;">Chưa có lịch điều khiển thủ công nào</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = schedules.map(item => {
+    tbody.innerHTML = displayList.map(item => {
       let badgeHtml = '';
       let actionHtml = '';
 
       if (item.status === 'RUNNING') {
         const text = activeTab === 'quat-thong-gio' ? 'Đang chạy quạt' : 'Đang tưới';
         badgeHtml = `<span class="badge badge-running">${text}</span>`;
-        actionHtml = `<button type="button" class="btn-danger-sm" data-action="stop" data-id="${item.id}">Dừng</button>`;
+        // KHÔNG cho click Dừng tại đây, hiển thị chỉ báo trạng thái rõ ràng
+        actionHtml = `<span style="color:#059669; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span>Đang chạy
+        </span>`;
       } else if (item.status === 'PENDING') {
         badgeHtml = `<span class="badge badge-blue">Chờ thực thi</span>`;
-        actionHtml = `<button type="button" class="btn-secondary-sm" data-action="cancel" data-id="${item.id}">Hủy</button>`;
+        actionHtml = `<button type="button" class="btn-secondary-sm" data-action="cancel" data-id="${item.id}" data-is-backend="${!!item.isBackend}">Hủy</button>`;
       } else if (item.status === 'DONE') {
         badgeHtml = `<span class="badge badge-green">Hoàn tất</span>`;
         actionHtml = `<span style="color:#94a3b8; font-size:12px;">—</span>`;
@@ -256,97 +504,101 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
 
-    // Gắn sự kiện nút Dừng và Hủy
-    tbody.querySelectorAll('button[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-        const id = Number(btn.dataset.id);
-        handleScheduleAction(id, action);
+    // Gắn sự kiện CHỈ cho nút HỦY lịch chờ (PENDING)
+    tbody.querySelectorAll('button[data-action="cancel"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const isBackend = btn.dataset.isBackend === 'true';
+        showToast('Đang hủy lịch hẹn giờ...');
+        if (isBackend) {
+          await deleteBackendSchedule(id);
+        }
+        const stateObj = getAppState();
+        const localItem = (stateObj.manualSchedules || []).find(x => String(x.id) === String(id));
+        if (localItem) localItem.status = 'CANCELLED';
+        saveAppState(stateObj);
+        showToast('Đã hủy lịch hẹn giờ thành công!');
+        loadManualSchedules();
       });
     });
-  }
-
-  // Xử lý Dừng / Hủy lịch thủ công
-  function handleScheduleAction(id, action) {
-    const stateObj = getAppState();
-    const item = (stateObj.manualSchedules || []).find(x => x.id === id);
-    if (!item) return;
-
-    if (action === 'stop') {
-      item.status = 'CANCELLED';
-      if (item.targetTab === 'quat-thong-gio') {
-        stateObj.fanOn = false;
-        addActivityLog('Quạt', 'Dừng quạt thủ công ngay lập tức', 'Thành công');
-        showToast('Đã dừng quạt thông gió thành công!');
-      } else {
-        stateObj.pumpOn = false;
-        addActivityLog('Máy bơm', 'Dừng tưới thủ công ngay lập tức', 'Thành công');
-        showToast('Đã dừng máy bơm tưới thành công!');
-      }
-    } else if (action === 'cancel') {
-      item.status = 'CANCELLED';
-      addActivityLog(item.device, `Hủy lịch hẹn giờ ${item.scheduledTime}`, 'Thành công');
-      showToast('Đã hủy lịch hẹn giờ thành công!');
-    }
-
-    saveAppState(stateObj);
-    renderManualScheduleTable();
   }
 
   // Nút Làm mới danh sách thủ công
   const btnRefresh = document.getElementById('btnRefreshManualList');
   if (btnRefresh) {
-    btnRefresh.addEventListener('click', () => {
-      renderManualScheduleTable();
-      showToast('Đã làm mới danh sách lịch thủ công!');
+    btnRefresh.addEventListener('click', async () => {
+      showToast('Đang làm mới danh sách lịch...');
+      await loadManualSchedules();
+      updateRunButtonUI();
+      showToast('Đã làm mới danh sách lịch!');
     });
   }
 
-  // Đặt lịch thủ công (Schedule Manual)
+  // =========================================================
+  // ĐẶT LỊCH THỦ CÔNG (SCHEDULE MANUAL)
+  // =========================================================
   const btnScheduleManual = document.getElementById('btnScheduleManual');
   if (btnScheduleManual) {
-    btnScheduleManual.addEventListener('click', () => {
-      const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'tuoi-cay';
+    btnScheduleManual.addEventListener('click', async () => {
+      const activeTab = getActiveTab();
+      const currentDevice = DEVICE_MAP[activeTab];
       const durationVal = Number(document.getElementById('manualDuration')?.value) || 5;
       const timeVal = document.getElementById('manualScheduleTime')?.value;
 
-      let formattedTime = '';
-      if (timeVal) {
-        const d = new Date(timeVal);
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
-        const hours = String(d.getHours()).padStart(2, '0');
-        const mins = String(d.getMinutes()).padStart(2, '0');
-        formattedTime = `${day}/${month}/${year} ${hours}:${mins}`;
-      } else {
-        const d = new Date();
-        d.setMinutes(d.getMinutes() + 15);
-        formattedTime = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      if (!timeVal) {
+        showToast('⚠️ Vui lòng chọn thời điểm thực thi');
+        return;
       }
+
+      const targetDate = new Date(timeVal);
+      const now = new Date();
+
+      if (targetDate <= now) {
+        showToast('⚠️ Thời điểm đặt lịch phải ở trong tương lai');
+        return;
+      }
+
+      // Format ISO có time zone offset (ví dụ +07:00) cho OffsetDateTime của Spring Boot
+      const tzOffset = -targetDate.getTimezoneOffset();
+      const sign = tzOffset >= 0 ? '+' : '-';
+      const pad = n => String(Math.floor(Math.abs(n))).padStart(2, '0');
+      const offsetStr = `${sign}${pad(tzOffset / 60)}:${pad(tzOffset % 60)}`;
+      const startTimeIso = new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000)
+        .toISOString().slice(0, 19) + offsetStr;
+
+      showToast(`Đang đặt lịch ${currentDevice.name.toLowerCase()} trên máy chủ...`);
+
+      try {
+        await createDeviceSchedule(currentDevice.id, startTimeIso, durationVal * 60);
+        showToast(`Đã lưu lịch ${currentDevice.name.toLowerCase()} lên hệ thống tự động!`);
+      } catch (err) {
+        console.warn('[Automation API] Không thể lưu lịch lên backend:', err);
+        showToast(`⚠️ Chưa kết nối được backend (${err.message}). Đã lưu lịch tạm trên máy.`);
+      }
+
+      const padNum = n => String(n).padStart(2, '0');
+      const formattedTime = `${padNum(targetDate.getDate())}/${padNum(targetDate.getMonth() + 1)}/${targetDate.getFullYear()} ${padNum(targetDate.getHours())}:${padNum(targetDate.getMinutes())}`;
 
       const stateObj = getAppState();
       stateObj.manualSchedules = stateObj.manualSchedules || [];
-      const newId = Date.now();
-      const deviceName = activeTab === 'quat-thong-gio' ? 'Quạt' : 'Máy bơm';
-
       stateObj.manualSchedules.unshift({
-        id: newId,
-        device: deviceName,
+        id: Date.now(),
+        device: currentDevice.name,
         targetTab: activeTab,
         scheduledTime: formattedTime,
         durationMinutes: durationVal,
         status: 'PENDING'
       });
-
       saveAppState(stateObj);
-      addActivityLog(deviceName, `Đặt lịch ${deviceName.toLowerCase()} thủ công vào ${formattedTime} (${durationVal} phút)`, 'Thành công');
-      showToast(`Đã tạo lịch ${deviceName.toLowerCase()} thủ công thành công!`);
-      renderManualScheduleTable();
+
+      addActivityLog(currentDevice.name, `Đặt lịch ${currentDevice.name.toLowerCase()} vào ${formattedTime} (${durationVal} phút)`, 'Thành công');
+      loadManualSchedules();
     });
   }
 
-  // ================= MODAL "TƯỚI NGAY" / "BẬT QUẠT NGAY" (CASSAVA STYLE) =================
+  // =========================================================
+  // XỬ LÝ NÚT CHÍNH (TƯỚI NGAY / BẬT QUẠT NGAY hoặc DỪNG)
+  // =========================================================
   const runNowModal = document.getElementById('runNowModal');
   const btnRunNow = document.getElementById('btnRunNow');
   const modalCancelBtn = document.getElementById('modalCancelBtn');
@@ -358,31 +610,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalDeviceName = document.getElementById('modalDeviceName');
   const modalDurationText = document.getElementById('modalDurationText');
 
-  // Mở modal xác nhận
+  // Khi click vào nút chính (btnRunNow):
+  // - Nếu thiết bị đang CHẠY -> Dừng thiết bị ngay (gọi stopActiveDevice)
+  // - Nếu thiết bị đang TẮT  -> Mở Modal xác nhận kích hoạt
   if (btnRunNow) {
-    btnRunNow.addEventListener('click', () => {
-      const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'tuoi-cay';
-      const durationVal = Number(document.getElementById('manualDuration')?.value) || 5;
-      const stateObj = getAppState();
+    btnRunNow.addEventListener('click', async () => {
+      const activeTab = getActiveTab();
+      const running = isDeviceRunning(activeTab);
 
-      if (modalZoneName) modalZoneName.textContent = stateObj.selectedZone || 'Nhà kính số 1';
-
-      if (activeTab === 'quat-thong-gio') {
-        if (modalConfirmTitle) modalConfirmTitle.textContent = 'Bật quạt ngay?';
-        if (modalConfirmDesc) modalConfirmDesc.textContent = 'Bạn có chắc chắn muốn kích hoạt quạt thông gió ngay bây giờ không?';
-        if (modalDeviceName) modalDeviceName.textContent = 'Quạt thông gió';
+      if (running) {
+        // ĐANG CHẠY: Nhấn nút Dừng
+        await stopActiveDevice();
       } else {
-        if (modalConfirmTitle) modalConfirmTitle.textContent = 'Tưới ngay?';
-        if (modalConfirmDesc) modalConfirmDesc.textContent = 'Bạn có chắc chắn muốn kích hoạt máy bơm tưới ngay bây giờ không?';
-        if (modalDeviceName) modalDeviceName.textContent = 'Máy bơm tưới';
-      }
+        // ĐANG TẮT: Mở modal xác nhận kích hoạt
+        const currentDevice = DEVICE_MAP[activeTab];
+        const durationVal = Number(document.getElementById('manualDuration')?.value) || 5;
+        const stateObj = getAppState();
 
-      if (modalDurationText) modalDurationText.textContent = `${durationVal} phút`;
-      if (runNowModal) runNowModal.classList.add('show');
+        if (modalZoneName) modalZoneName.textContent = stateObj.selectedZone || 'Nhà kính số 1';
+
+        if (activeTab === 'quat-thong-gio') {
+          if (modalConfirmTitle) modalConfirmTitle.textContent = 'Bật quạt ngay?';
+          if (modalConfirmDesc) modalConfirmDesc.textContent = 'Bạn có chắc chắn muốn kích hoạt quạt thông gió ngay bây giờ không?';
+          if (modalDeviceName) modalDeviceName.textContent = 'Quạt thông gió';
+        } else {
+          if (modalConfirmTitle) modalConfirmTitle.textContent = 'Tưới ngay?';
+          if (modalConfirmDesc) modalConfirmDesc.textContent = 'Bạn có chắc chắn muốn kích hoạt máy bơm tưới ngay bây giờ không?';
+          if (modalDeviceName) modalDeviceName.textContent = 'Máy bơm tưới';
+        }
+
+        if (modalDurationText) modalDurationText.textContent = `${durationVal} phút`;
+        if (runNowModal) runNowModal.classList.add('show');
+      }
     });
   }
 
-  // Đóng modal
   function closeModal() {
     if (runNowModal) runNowModal.classList.remove('show');
   }
@@ -396,29 +658,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Kích hoạt ngay lập tức từ Modal
   if (modalConfirmBtn) {
-    modalConfirmBtn.addEventListener('click', () => {
+    modalConfirmBtn.addEventListener('click', async () => {
       closeModal();
-      const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'tuoi-cay';
+      const activeTab = getActiveTab();
+      const currentDevice = DEVICE_MAP[activeTab];
       const durationVal = Number(document.getElementById('manualDuration')?.value) || 5;
+
+      showToast(`Đang gửi lệnh kích hoạt ${currentDevice.name.toLowerCase()} xuống thiết bị...`);
+
+      try {
+        await sendDeviceCommand(currentDevice.id, 'ON');
+        showToast(`Đã bật ${currentDevice.name.toLowerCase()} thành công!`);
+      } catch (err) {
+        showToast(`⚠️ Không thể kết nối backend: ${err.message}. Đã bật trạng thái.`);
+      }
+
+      // Cập nhật state local sang BẬT
       const stateObj = getAppState();
       stateObj.manualSchedules = stateObj.manualSchedules || [];
 
       const now = new Date();
-      const timeStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const deviceName = activeTab === 'quat-thong-gio' ? 'Quạt' : 'Máy bơm';
+      const pad = n => String(n).padStart(2, '0');
+      const timeStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-      // Chuyển các lịch đang chạy cũ thành DONE trước khi tạo lịch mới
+      // Chuyển các lịch đang chạy cũ thành DONE
       stateObj.manualSchedules.forEach(item => {
         if (item.targetTab === activeTab && item.status === 'RUNNING') {
           item.status = 'DONE';
         }
       });
 
-      // Tạo lịch mới ở trạng thái RUNNING
-      const newId = Date.now();
+      // Thêm lịch RUNNING mới vào danh sách
       stateObj.manualSchedules.unshift({
-        id: newId,
-        device: deviceName,
+        id: Date.now(),
+        device: currentDevice.name,
         targetTab: activeTab,
         scheduledTime: timeStr,
         durationMinutes: durationVal,
@@ -432,9 +705,36 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       saveAppState(stateObj);
-      addActivityLog(deviceName, `Kích hoạt ${deviceName.toLowerCase()} thủ công ngay lập tức (${durationVal} phút)`, 'Thành công');
-      showToast(`Đã gửi lệnh kích hoạt ${deviceName.toLowerCase()} thành công!`);
-      renderManualScheduleTable();
+      addActivityLog(currentDevice.name, `Kích hoạt ${currentDevice.name.toLowerCase()} thủ công ngay lập tức (${durationVal} phút)`, 'Thành công');
+
+      // CẬP NHẬT NÚT SANG TRẠNG THÁI "DỪNG" MÀU ĐỎ NGAY LẬP TỨC
+      updateRunButtonUI();
+      loadManualSchedules();
+
+      // Hẹn giờ tự động tắt sau khi hết thời gian chạy
+      if (durationVal > 0) {
+        if (autoOffTimers[activeTab]) clearTimeout(autoOffTimers[activeTab]);
+
+        autoOffTimers[activeTab] = setTimeout(async () => {
+          try {
+            await sendDeviceCommand(currentDevice.id, 'OFF');
+            console.log(`[Auto Stop] Đã tự động ngắt ${currentDevice.name} sau ${durationVal} phút`);
+          } catch (e) {
+            console.warn('[Auto Stop] Lỗi gửi lệnh ngắt tự động:', e.message);
+          }
+          const s = getAppState();
+          if (activeTab === 'quat-thong-gio') s.fanOn = false;
+          else s.pumpOn = false;
+          saveAppState(s);
+
+          updateRunButtonUI();
+          loadManualSchedules();
+          showToast(`Đã hoàn tất chu kỳ ${currentDevice.name.toLowerCase()} (${durationVal} phút)`);
+        }, durationVal * 60 * 1000);
+      }
     });
   }
+
+  // Khởi tạo ban đầu
+  updateRunButtonUI();
 });

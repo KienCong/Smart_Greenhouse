@@ -3,10 +3,10 @@ package com.smartgreenhouse.automation.service;
 import com.smartgreenhouse.automation.dto.CreateScheduleRequest;
 import com.smartgreenhouse.automation.model.DeviceSchedule;
 import com.smartgreenhouse.automation.repository.DeviceScheduleRepository;
-import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class DeviceScheduleService {
@@ -18,7 +18,7 @@ public class DeviceScheduleService {
         this.repository = repository;
     }
 
-    public DeviceSchedule create( String fieldId, CreateScheduleRequest request) {
+    public DeviceSchedule create(String fieldId, CreateScheduleRequest request) {
 
         Instant start = request.startTime().toInstant();
 
@@ -42,5 +42,13 @@ public class DeviceScheduleService {
         schedule.setTriggerType(request.triggerType());
 
         return repository.save(schedule);
+    }
+
+    public List<DeviceSchedule> getSchedulesByField(String fieldId) {
+        return repository.findByFieldIdOrderByStartTimeDesc(fieldId);
+    }
+
+    public void delete(String scheduleId) {
+        repository.deleteById(scheduleId);
     }
 }

@@ -42,7 +42,8 @@
         <div class="card">
           <div class="card-header-flex">
             <h2 class="card-title" style="margin-bottom:0;" id="ruleConfigTitle">Cấu hình tưới tự động</h2>
-            <div style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600;">
+            <div id="ruleAutoSwitchWrapper"
+              style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600;">
               <label class="switch">
                 <input type="checkbox" id="ruleAutoSwitch" checked>
                 <span class="slider"></span>
@@ -85,7 +86,8 @@
                 <span>Chế độ điều khiển thủ công</span>
               </div>
               <p style="font-size:12.5px; color:#334155; margin:0; line-height:1.5;" id="manualAlertDesc">
-                Thiết bị sẽ không tự động kích hoạt theo cảm biến. Bạn có thể kích hoạt chạy ngay hoặc hẹn giờ thực thi thủ công.
+                Thiết bị sẽ không tự động kích hoạt theo cảm biến. Bạn có thể kích hoạt chạy ngay hoặc hẹn giờ thực thi
+                thủ công.
               </p>
             </div>
 
@@ -126,11 +128,6 @@
             <div class="card-header-flex">
               <h2 class="card-title" style="margin-bottom:0;">Lịch hoạt động tự động</h2>
               <div style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600;">
-                <label class="switch">
-                  <input type="checkbox" id="ruleScheduleSwitch" checked>
-                  <span class="slider"></span>
-                </label>
-                <span>Bật</span>
               </div>
             </div>
 
@@ -163,8 +160,10 @@
                 <span>Lưu ý</span>
               </div>
               <ul>
-                <li>Thiết bị (bơm hoặc quạt) tự động kích hoạt khi cảm biến vượt ngưỡng cài đặt và ngắt sau thời gian chạy tối đa.</li>
-                <li>Sau mỗi chu kỳ hoạt động, hệ thống sẽ nghỉ theo thời gian cài đặt trước khi kiểm tra lại cảm biến.</li>
+                <li>Thiết bị (bơm hoặc quạt) tự động kích hoạt khi cảm biến vượt ngưỡng cài đặt và ngắt sau thời gian
+                  chạy tối đa.</li>
+                <li>Sau mỗi chu kỳ hoạt động, hệ thống sẽ nghỉ theo thời gian cài đặt trước khi kiểm tra lại cảm biến.
+                </li>
                 <li>Có thể chuyển sang chế độ MANUAL để điều khiển thủ công.</li>
               </ul>
             </div>
@@ -178,7 +177,8 @@
           <div class="card" id="manualScheduleCard" style="display:none;">
             <div class="card-header-flex">
               <h2 class="card-title" style="margin-bottom:0;" id="manualListTitle">Danh sách lịch tưới thủ công</h2>
-              <button type="button" class="btn btn-outline" id="btnRefreshManualList" style="padding:6px 14px; font-size:12.5px;">
+              <button type="button" class="btn btn-outline" id="btnRefreshManualList"
+                style="padding:6px 14px; font-size:12.5px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M23 4v6h-6"></path>
                   <path d="M1 20v-6h6"></path>
@@ -188,7 +188,8 @@
               </button>
             </div>
 
-            <div class="table-container" style="box-shadow:none; border:1px solid var(--border-color); border-radius:8px;">
+            <div class="table-container"
+              style="box-shadow:none; border:1px solid var(--border-color); border-radius:8px;">
               <table class="data-table">
                 <thead>
                   <tr>

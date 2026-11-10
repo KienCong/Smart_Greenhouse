@@ -112,9 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
           `;
           submitBtn.style.background = '#16a34a';
 
-          // Chuyển hướng sang trang Tổng quan Dashboard
+          // Chuyển hướng sang trang Quản lý vườn
           setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'zones.html';
           }, 600);
         } else {
           submitBtn.disabled = false;

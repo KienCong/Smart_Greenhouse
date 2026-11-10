@@ -11,7 +11,7 @@
 #define MQTT_PORT       1883
 
 // Gateway
-#define FIELD_ID        "field01"
+#define FIELD_ID        "6ae17860acc00a053d9c7a7e"
 #define GATEWAY_ID      "gateway01"
 
 // LED
