@@ -6,11 +6,12 @@ Dự án giao diện Frontend Web được tách thành các trang riêng biệt
 ```text
 FE/
 ├── login.html              # Trang Đăng nhập hệ thống (Glassmorphism Dark Theme, validation, demo account)
-├── index.html              # Trang Tổng quan (Dashboard 4 cảm biến, Biểu đồ 24h, Trạng thái thiết bị)
+├── index.html              # Trang khởi động mặc định (Tự động chuyển hướng ngay sang zones.html)
+├── zones.html              # Trang Quản lý vườn (Danh sách Nhà kính & Thêm khu vực mới - trang mở đầu tiên)
+├── overview.html           # Trang Tổng quan (Dashboard 4 cảm biến, Biểu đồ 24h, Trạng thái thiết bị khi xem chi tiết 1 vườn)
 ├── sensors.html            # Trang Dữ liệu cảm biến (Biểu đồ Sparkline & Xuất CSV)
-├── control.html            # Trang Quy tắc tự động (Chế độ AUTO/MANUAL, ngưỡng ẩm, nhiệt độ, lịch hoạt động)
+├── control.html            # Trang Điều khiển thiết bị (Chế độ AUTO/MANUAL, hẹn giờ, lịch hoạt động)
 ├── history.html            # Trang Lịch sử hoạt động (Bảng lọc sự kiện Máy bơm, Quạt, Cảnh báo)
-├── zones.html              # Trang Quản lý khu vực (Danh sách Nhà kính & Thêm khu vực mới)
 ├── settings.html           # Trang Cài đặt hệ thống (Cấu hình MQTT, Đăng xuất & Khôi phục dữ liệu)
 ├── css/
 │   ├── style.css           # Master stylesheet (import các module bên dưới)

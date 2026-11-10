@@ -5,7 +5,7 @@
 
 # VS Code IDE config
 .vscode/
-
+C:/
 # Nếu dùng Clion/CLion PlatformIO plugin (dự phòng)
 .idea/
 cmake-build-*/

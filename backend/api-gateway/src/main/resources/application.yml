@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+
+            # USER SERVICE
+            - id: user-service
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/users/**
+
+            # DEVICE SERVICE
+            - id: device-service
+              uri: http://localhost:8082
+              predicates:
+                - Path=/api/devices/**
+
+            # TELEMETRY SERVICE
+            - id: telemetry-service
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/telemetry/**
+
+            # AUTOMATION SERVICE
+            - id: automation-service
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/automation/**

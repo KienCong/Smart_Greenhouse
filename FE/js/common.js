@@ -26,6 +26,9 @@ const defaultState = {
   zones: [
     {
       id: 1,
+      // fieldId: MongoDB ObjectId của field này trong collection 'sensor_readings'
+      // Lấy từ: db.getCollection('sensor_readings').findOne().field_id
+      fieldId: 'REPLACE_WITH_FIELD_OBJECTID_1',
       name: 'Nhà kính số 1',
       area: 100,
       status: 'Hoạt động',
@@ -35,6 +38,8 @@ const defaultState = {
     },
     {
       id: 2,
+      // fieldId: MongoDB ObjectId của field này trong collection 'sensor_readings'
+      fieldId: 'REPLACE_WITH_FIELD_OBJECTID_2',
       name: 'Nhà kính số 2',
       area: 150,
       status: 'Bảo trì',
@@ -149,8 +154,9 @@ function renderSidebar() {
 
   // Lấy tên file trang hiện tại để gán class active
   const currentPath = window.location.pathname;
-  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'index.html';
-  if (!currentPage.endsWith('.html')) currentPage = 'index.html';
+  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'zones.html';
+  if (!currentPage.endsWith('.html')) currentPage = 'zones.html';
+  if (currentPage === 'index.html') currentPage = 'zones.html';
 
   const navHtml = SIDEBAR_NAV_ITEMS.map(item => {
     const isActive = (currentPage === item.page) ? 'active' : '';
@@ -163,7 +169,7 @@ function renderSidebar() {
   }).join('');
 
   sidebar.innerHTML = `
-    <a href="index.html" class="sidebar-brand">
+    <a href="zones.html" class="sidebar-brand">
       <div class="brand-logo">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/>
@@ -242,11 +248,12 @@ function renderTopbar() {
   if (!topbar) return;
 
   const currentPath = window.location.pathname;
-  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'index.html';
-  if (!currentPage.endsWith('.html')) currentPage = 'index.html';
+  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'zones.html';
+  if (!currentPage.endsWith('.html')) currentPage = 'zones.html';
+  if (currentPage === 'index.html') currentPage = 'zones.html';
 
-  // Ở trang Tổng quan (index.html) và Quản lý vườn (zones.html), không hiển thị mục chọn nhà kính
-  const hideGreenhouseSelector = (currentPage === 'index.html' || currentPage === 'zones.html');
+  // Ở trang Tổng quan (overview.html) và Quản lý vườn (zones.html), không hiển thị mục chọn nhà kính
+  const hideGreenhouseSelector = (currentPage === 'overview.html' || currentPage === 'zones.html');
 
   const state = getAppState();
 

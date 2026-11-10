@@ -12,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/automation")
+@CrossOrigin(origins = "*")
 public class DeviceCommandController {
 
     private final DeviceCommandService service;
