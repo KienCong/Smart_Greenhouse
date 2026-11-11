@@ -414,6 +414,145 @@ document.addEventListener('DOMContentLoaded', () => {
   // RENDER BẢNG DANH SÁCH LỊCH THỦ CÔNG
   // LƯU Ý: Dòng RUNNING không cho click dừng tại đây, mà phải dùng nút Dừng lớn
   // =========================================================
+  const PAGE_SIZE = 10; // Số dòng mỗi trang
+  let currentPage = 1;  // Trang hiện tại (bắt đầu từ 1)
+  let cachedScheduleList = []; // Cache toàn bộ danh sách để phân trang
+
+  // Render phần trang vào DOM
+  function renderPagination(totalItems) {
+    const paginationEl = document.getElementById('manualPagination');
+    const infoEl       = document.getElementById('manualPaginationInfo');
+    const numbersEl    = document.getElementById('manualPageNumbers');
+    const prevBtn      = document.getElementById('manualPagePrev');
+    const nextBtn      = document.getElementById('manualPageNext');
+    if (!paginationEl) return;
+
+    const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+
+    if (totalPages <= 1) {
+      paginationEl.style.display = 'none';
+      return;
+    }
+
+    paginationEl.style.display = 'flex';
+
+    const from = Math.min((currentPage - 1) * PAGE_SIZE + 1, totalItems);
+    const to   = Math.min(currentPage * PAGE_SIZE, totalItems);
+
+    // Vô hiệu hóa nút Trước / Tiếp
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+
+    // Render số trang (hiện tối đa 5 nút số, có dấu "…" khi cần)
+    if (numbersEl) {
+      const pages = [];
+      if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        if (currentPage > 3) pages.push('…');
+        for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+          pages.push(i);
+        }
+        if (currentPage < totalPages - 2) pages.push('…');
+        pages.push(totalPages);
+      }
+
+      numbersEl.innerHTML = pages.map(p =>
+        p === '…'
+          ? `<span style="padding:0 4px; color:#94a3b8;">…</span>`
+          : `<button class="btn ${p === currentPage ? 'btn-primary' : 'btn-outline'}"
+                     data-page="${p}"
+                     style="padding:4px 10px; font-size:12.5px; min-width:32px;">${p}</button>`
+      ).join('');
+
+      numbersEl.querySelectorAll('button[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentPage = Number(btn.dataset.page);
+          renderSchedulePage();
+        });
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderSchedulePage(); } };
+    }
+    if (nextBtn) {
+      nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderSchedulePage(); } };
+    }
+  }
+
+  // Render trang hiện tại từ cachedScheduleList
+  function renderSchedulePage() {
+    const tbody = document.getElementById('manualScheduleTableBody');
+    const activeTab = getActiveTab();
+    if (!tbody) return;
+
+    const totalItems = cachedScheduleList.length;
+
+    if (!totalItems) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:24px 16px;">Chưa có lịch điều khiển thủ công nào</td></tr>`;
+      const paginationEl = document.getElementById('manualPagination');
+      if (paginationEl) paginationEl.style.display = 'none';
+      return;
+    }
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = cachedScheduleList.slice(start, start + PAGE_SIZE);
+
+    tbody.innerHTML = pageItems.map(item => {
+      let badgeHtml = '';
+      let actionHtml = '';
+
+      if (item.status === 'RUNNING') {
+        const text = activeTab === 'quat-thong-gio' ? 'Đang chạy quạt' : 'Đang tưới';
+        badgeHtml = `<span class="badge badge-running">${text}</span>`;
+        // KHÔNG cho click Dừng tại đây, hiển thị chỉ báo trạng thái rõ ràng
+        actionHtml = `<span style="color:#059669; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span>Đang chạy
+        </span>`;
+      } else if (item.status === 'PENDING') {
+        badgeHtml = `<span class="badge badge-blue">Chờ thực thi</span>`;
+        actionHtml = `<button type="button" class="btn-secondary-sm" data-action="cancel" data-id="${item.id}" data-is-backend="${!!item.isBackend}">Hủy</button>`;
+      } else if (item.status === 'DONE') {
+        badgeHtml = `<span class="badge badge-green">Hoàn tất</span>`;
+        actionHtml = `<span style="color:#94a3b8; font-size:12px;">—</span>`;
+      } else {
+        badgeHtml = `<span class="badge badge-yellow">Đã dừng / Hủy</span>`;
+        actionHtml = `<span style="color:#94a3b8; font-size:12px;">—</span>`;
+      }
+
+      return `
+        <tr>
+          <td><strong style="color:#1e293b;">${item.scheduledTime}</strong></td>
+          <td>${item.durationMinutes} phút</td>
+          <td>${badgeHtml}</td>
+          <td style="text-align:right;">${actionHtml}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Gắn sự kiện CHỈ cho nút HỦY lịch chờ (PENDING)
+    tbody.querySelectorAll('button[data-action="cancel"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const isBackend = btn.dataset.isBackend === 'true';
+        showToast('Đang hủy lịch hẹn giờ...');
+        if (isBackend) {
+          await deleteBackendSchedule(id);
+        }
+        const stateObj = getAppState();
+        const localItem = (stateObj.manualSchedules || []).find(x => String(x.id) === String(id));
+        if (localItem) localItem.status = 'CANCELLED';
+        saveAppState(stateObj);
+        showToast('Đã hủy lịch hẹn giờ thành công!');
+        loadManualSchedules();
+      });
+    });
+
+    renderPagination(totalItems);
+  }
+
   async function loadManualSchedules() {
     const tbody = document.getElementById('manualScheduleTableBody');
     if (!tbody) return;
@@ -467,60 +606,10 @@ document.addEventListener('DOMContentLoaded', () => {
       displayList = (stateObj.manualSchedules || []).filter(item => item.targetTab === activeTab);
     }
 
-    if (!displayList.length) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:24px 16px;">Chưa có lịch điều khiển thủ công nào</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = displayList.map(item => {
-      let badgeHtml = '';
-      let actionHtml = '';
-
-      if (item.status === 'RUNNING') {
-        const text = activeTab === 'quat-thong-gio' ? 'Đang chạy quạt' : 'Đang tưới';
-        badgeHtml = `<span class="badge badge-running">${text}</span>`;
-        // KHÔNG cho click Dừng tại đây, hiển thị chỉ báo trạng thái rõ ràng
-        actionHtml = `<span style="color:#059669; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
-          <span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span>Đang chạy
-        </span>`;
-      } else if (item.status === 'PENDING') {
-        badgeHtml = `<span class="badge badge-blue">Chờ thực thi</span>`;
-        actionHtml = `<button type="button" class="btn-secondary-sm" data-action="cancel" data-id="${item.id}" data-is-backend="${!!item.isBackend}">Hủy</button>`;
-      } else if (item.status === 'DONE') {
-        badgeHtml = `<span class="badge badge-green">Hoàn tất</span>`;
-        actionHtml = `<span style="color:#94a3b8; font-size:12px;">—</span>`;
-      } else {
-        badgeHtml = `<span class="badge badge-yellow">Đã dừng / Hủy</span>`;
-        actionHtml = `<span style="color:#94a3b8; font-size:12px;">—</span>`;
-      }
-
-      return `
-        <tr>
-          <td><strong style="color:#1e293b;">${item.scheduledTime}</strong></td>
-          <td>${item.durationMinutes} phút</td>
-          <td>${badgeHtml}</td>
-          <td style="text-align:right;">${actionHtml}</td>
-        </tr>
-      `;
-    }).join('');
-
-    // Gắn sự kiện CHỈ cho nút HỦY lịch chờ (PENDING)
-    tbody.querySelectorAll('button[data-action="cancel"]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        const isBackend = btn.dataset.isBackend === 'true';
-        showToast('Đang hủy lịch hẹn giờ...');
-        if (isBackend) {
-          await deleteBackendSchedule(id);
-        }
-        const stateObj = getAppState();
-        const localItem = (stateObj.manualSchedules || []).find(x => String(x.id) === String(id));
-        if (localItem) localItem.status = 'CANCELLED';
-        saveAppState(stateObj);
-        showToast('Đã hủy lịch hẹn giờ thành công!');
-        loadManualSchedules();
-      });
-    });
+    // Lưu cache và reset về trang 1 khi tải lại danh sách mới
+    cachedScheduleList = displayList;
+    currentPage = 1;
+    renderSchedulePage();
   }
 
   // Nút Làm mới danh sách thủ công
