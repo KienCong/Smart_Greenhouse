@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   const tbody = document.getElementById('historyTableBody');
+  const paginationContainer = document.getElementById('historyPagination');
   const pills = document.querySelectorAll('#historyFilterPills .pill-btn');
+  
+  const PAGE_SIZE = 10; // Tối đa 10 phần tử mỗi trang
+  let currentPage = 1;
   let currentFilter = 'ALL';
 
   // Chuẩn hóa loại sự kiện để hỗ trợ cả dữ liệu mới và dữ liệu cũ
@@ -29,12 +33,89 @@ document.addEventListener('DOMContentLoaded', () => {
     return status;
   }
 
+  function renderPagination(totalItems) {
+    if (!paginationContainer) return;
+    const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+
+    if (totalItems === 0) {
+      paginationContainer.innerHTML = '';
+      return;
+    }
+
+    // Nút Trang trước (<)
+    let html = `
+      <button class="page-num" id="historyPrevPage" ${currentPage <= 1 ? 'disabled' : ''} title="Trang trước">&lt;</button>
+    `;
+
+    // Tính toán các trang hiển thị
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('…');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('…');
+      pages.push(totalPages);
+    }
+
+    pages.forEach(p => {
+      if (p === '…') {
+        html += `<span style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; color:#94a3b8; font-weight:600;">…</span>`;
+      } else {
+        html += `<button class="page-num ${p === currentPage ? 'active' : ''}" data-page="${p}">${p}</button>`;
+      }
+    });
+
+    // Nút Trang tiếp (>)
+    html += `
+      <button class="page-num" id="historyNextPage" ${currentPage >= totalPages ? 'disabled' : ''} title="Trang tiếp">&gt;</button>
+    `;
+
+    paginationContainer.innerHTML = html;
+
+    // Gắn sự kiện nút Trước
+    const prevBtn = document.getElementById('historyPrevPage');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderTable();
+        }
+      });
+    }
+
+    // Gắn sự kiện nút Tiếp
+    const nextBtn = document.getElementById('historyNextPage');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderTable();
+        }
+      });
+    }
+
+    // Gắn sự kiện các nút số trang
+    paginationContainer.querySelectorAll('button[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = Number(btn.dataset.page);
+        if (p && p !== currentPage) {
+          currentPage = p;
+          renderTable();
+        }
+      });
+    });
+  }
+
   function renderTable() {
     if (!tbody) return;
     const s = getAppState();
     
     // Chuẩn hóa và lọc danh sách nhật ký
-    const rows = (s.logs || [])
+    const allFiltered = (s.logs || [])
       .filter(item => item.type !== 'Cảm biến')
       .map(item => ({
         ...item,
@@ -42,12 +123,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }))
       .filter(item => currentFilter === 'ALL' || item.normalizedType === currentFilter);
 
-    if (rows.length === 0) {
+    const totalItems = allFiltered.length;
+    const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+
+    if (totalItems === 0) {
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:32px; color:#94a3b8;">Không có nhật ký nào cho mục đã chọn</td></tr>`;
+      renderPagination(0);
       return;
     }
 
-    tbody.innerHTML = rows.map(item => `
+    // Giới hạn tối đa 10 phần tử cho trang hiện tại
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const pageRows = allFiltered.slice(startIndex, startIndex + PAGE_SIZE);
+
+    tbody.innerHTML = pageRows.map(item => `
       <tr>
         <td>${item.time}</td>
         <td>${getBadgeForType(item.normalizedType)}</td>
@@ -55,6 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${getBadgeForStatus(item.status)}</td>
       </tr>
     `).join('');
+
+    renderPagination(totalItems);
   }
 
   renderTable();
@@ -64,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
       pills.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentFilter = btn.dataset.filter;
+      currentPage = 1; // Reset về trang 1 khi lọc
       renderTable();
     });
   });

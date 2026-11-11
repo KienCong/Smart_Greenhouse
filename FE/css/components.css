@@ -229,6 +229,11 @@ input:checked + .slider:before {
   border-color: var(--primary);
 }
 
+.page-num:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ================= ALERTS ================= */
 .info-alert {
   background: var(--info-bg);

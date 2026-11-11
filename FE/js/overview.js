@@ -1,3 +1,45 @@
+// =========================================================
+// CẤU HÌNH API
+// =========================================================
+const OV_API_BASE = 'http://localhost:8080/api/telemetry';
+
+// =========================================================
+// LẤY GIÁ TRỊ CẢM BIẾN MỚI NHẤT TỪ API
+// =========================================================
+async function fetchOverviewSensorData() {
+  try {
+    const res = await fetch(`${OV_API_BASE}/latest`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const raw = data.raw || {};
+
+    const tempEl  = document.getElementById('ovTempValue');
+    const airEl   = document.getElementById('ovAirValue');
+    const soilEl  = document.getElementById('ovSoilValue');
+    const lightEl = document.getElementById('ovLightValue');
+
+    if (tempEl && raw.air_temperature != null) {
+      tempEl.textContent = `${Number(raw.air_temperature).toFixed(1)}°C`;
+    }
+    if (airEl && raw.air_humidity != null) {
+      airEl.textContent = `${Number(raw.air_humidity).toFixed(1)}%`;
+    }
+    if (soilEl && raw.soil_moisture != null) {
+      soilEl.textContent = `${Number(raw.soil_moisture).toFixed(1)}%`;
+    } else if (soilEl) {
+      soilEl.textContent = '—%'; // Không có dữ liệu độ ẩm đất
+    }
+    if (lightEl && raw.light_intensity != null) {
+      lightEl.textContent = `${Math.round(raw.light_intensity)} lux`;
+    }
+
+    console.info('[Overview] Cập nhật cảm biến:', raw);
+  } catch (err) {
+    console.warn('[Overview] Không thể tải dữ liệu cảm biến:', err.message);
+    // Giữ nguyên giá trị mặc định — không hiển thị lỗi để không phá vỡ UI
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const state = getAppState();
   const pumpToggle = document.getElementById('ovPumpToggle');
@@ -167,26 +209,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // ================= NÚT LÀM MỚI (REFRESH) =================
   const refreshBtn = document.getElementById('refreshOverviewBtn');
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      // Cập nhật ngẫu nhiên nhẹ giá trị các cảm biến
-      const tempVal = (28.0 + Math.random() * 0.8).toFixed(1);
-      const airVal = (71.5 + Math.random() * 1.5).toFixed(1);
-      const soilVal = (42.0 + Math.random() * 1.2).toFixed(1);
-      const lightVal = Math.round(540 + Math.random() * 40);
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
+      refreshBtn.querySelector('span').textContent = 'Đang tải...';
 
-      const metricVals = document.querySelectorAll('.metric-value');
-      if (metricVals[0]) metricVals[0].textContent = `${tempVal}°C`;
-      if (metricVals[1]) metricVals[1].textContent = `${airVal}%`;
-      if (metricVals[2]) metricVals[2].textContent = `${soilVal}%`;
-      if (metricVals[3]) metricVals[3].textContent = `${lightVal} lux`;
+      await fetchOverviewSensorData();
 
-      // Cập nhật lại thời lượng hoạt động thiết bị
+      // Cập nhật lại thời lượng hoạt động thiết bị (giữ dữ liệu hiện có)
       const newPumpData = [0, 0, 15, 20, 10, 0, 15, 5];
       const newFanData = [0, 0, 20, 35, 45, 30, 15, 0];
       renderDeviceActivityChart(newPumpData, newFanData);
 
       syncUI();
+      refreshBtn.disabled = false;
+      refreshBtn.querySelector('span').textContent = 'Làm mới';
       showToast('Đã làm mới dữ liệu tổng quan');
     });
   }
+
+  // Tải dữ liệu cảm biến ngay khi trang mở
+  fetchOverviewSensorData();
+
+  // Tự động làm mới mỗi 60 giây
+  setInterval(fetchOverviewSensorData, 60_000);
 });

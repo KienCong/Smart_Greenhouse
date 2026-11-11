@@ -55,7 +55,15 @@ const defaultState = {
     { time: '28/04/2025 08:30', type: 'Quạt', event: 'Bật quạt thông gió (15p)', status: 'Thành công' },
     { time: '28/04/2025 07:21', type: 'Cảnh báo', event: 'Nhiệt độ nhà kính vượt ngưỡng an toàn (34.2°C)', status: 'Đã xử lý' },
     { time: '27/04/2025 18:32', type: 'Quạt', event: 'Bật quạt thông gió (15p)', status: 'Thành công' },
-    { time: '27/04/2025 17:15', type: 'Máy bơm', event: 'Tưới cây theo lịch trình buổi chiều (45s)', status: 'Thành công' }
+    { time: '27/04/2025 17:15', type: 'Máy bơm', event: 'Tưới cây theo lịch trình buổi chiều (45s)', status: 'Thành công' },
+    { time: '27/04/2025 14:20', type: 'Cảnh báo', event: 'Độ ẩm đất giảm xuống dưới ngưỡng 30%', status: 'Đã xử lý' },
+    { time: '27/04/2025 12:00', type: 'Quạt', event: 'Bật quạt thông gió trưa hè (20p)', status: 'Thành công' },
+    { time: '27/04/2025 11:30', type: 'Máy bơm', event: 'Bật bơm làm mát phun sương (60s)', status: 'Thành công' },
+    { time: '27/04/2025 09:10', type: 'Quạt', event: 'Bật quạt thông gió (15p)', status: 'Thành công' },
+    { time: '27/04/2025 06:45', type: 'Máy bơm', event: 'Tưới cây theo lịch trình buổi sáng (40s)', status: 'Thành công' },
+    { time: '26/04/2025 18:00', type: 'Quạt', event: 'Tắt quạt thông gió cuối ngày', status: 'Thành công' },
+    { time: '26/04/2025 15:30', type: 'Cảnh báo', event: 'Nhiệt độ phòng tăng cao (35.1°C)', status: 'Đã xử lý' },
+    { time: '26/04/2025 08:00', type: 'Máy bơm', event: 'Kích hoạt tưới buổi sáng (30s)', status: 'Thành công' }
   ]
 };
 
@@ -107,14 +115,9 @@ function showToast(message) {
 
 /* ================= SIDEBAR MANAGEMENT ================= */
 const SIDEBAR_NAV_ITEMS = [
-  // {
-  //   page: 'index.html',
-  //   title: 'Tổng quan',
-  //   icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z"/></svg>'
-  // },
   {
-    page: 'zones.html',
-    title: 'Quản lý vườn',
+    page: 'overview.html',
+    title: 'Tổng quan',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z"/></svg>'
   },
   {
@@ -154,9 +157,9 @@ function renderSidebar() {
 
   // Lấy tên file trang hiện tại để gán class active
   const currentPath = window.location.pathname;
-  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'zones.html';
-  if (!currentPage.endsWith('.html')) currentPage = 'zones.html';
-  if (currentPage === 'index.html') currentPage = 'zones.html';
+  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'overview.html';
+  if (!currentPage.endsWith('.html')) currentPage = 'overview.html';
+  if (currentPage === 'index.html') currentPage = 'overview.html';
 
   const navHtml = SIDEBAR_NAV_ITEMS.map(item => {
     const isActive = (currentPage === item.page) ? 'active' : '';
@@ -169,7 +172,7 @@ function renderSidebar() {
   }).join('');
 
   sidebar.innerHTML = `
-    <a href="zones.html" class="sidebar-brand">
+    <a href="overview.html" class="sidebar-brand">
       <div class="brand-logo">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/>
@@ -248,12 +251,12 @@ function renderTopbar() {
   if (!topbar) return;
 
   const currentPath = window.location.pathname;
-  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'zones.html';
-  if (!currentPage.endsWith('.html')) currentPage = 'zones.html';
-  if (currentPage === 'index.html') currentPage = 'zones.html';
+  let currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'overview.html';
+  if (!currentPage.endsWith('.html')) currentPage = 'overview.html';
+  if (currentPage === 'index.html') currentPage = 'overview.html';
 
-  // Ở trang Tổng quan (overview.html) và Quản lý vườn (zones.html), không hiển thị mục chọn nhà kính
-  const hideGreenhouseSelector = (currentPage === 'overview.html' || currentPage === 'zones.html');
+  // Ẩn hoàn toàn mục chọn nhà kính ở tất cả các tab theo yêu cầu
+  const hideGreenhouseSelector = true;
 
   const state = getAppState();
 
